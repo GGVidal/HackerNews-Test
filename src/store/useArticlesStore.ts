@@ -1,0 +1,219 @@
+import { create } from 'zustand';
+import { Article, NotificationPreferences } from '../types';
+import { fetchArticles } from '../services/api';
+import * as storage from '../services/storage';
+
+interface ArticlesState {
+  articles: Article[];
+  favoriteIds: string[];
+  deletedIds: string[];
+  isLoading: boolean;
+  isRefreshing: boolean;
+  error: string | null;
+  notificationPrefs: NotificationPreferences;
+  isInitialized: boolean;
+
+  // Actions
+  initialize: () => Promise<void>;
+  loadArticles: () => Promise<void>;
+  refreshArticles: () => Promise<void>;
+  toggleFavorite: (articleId: string) => Promise<void>;
+  deleteArticle: (articleId: string) => Promise<void>;
+  restoreArticle: (articleId: string) => Promise<void>;
+  permanentlyDeleteArticle: (articleId: string) => Promise<void>;
+  setNotificationPrefs: (prefs: Partial<NotificationPreferences>) => Promise<void>;
+  clearError: () => void;
+}
+
+export const useArticlesStore = create<ArticlesState>((set, get) => ({
+  articles: [],
+  favoriteIds: [],
+  deletedIds: [],
+  isLoading: false,
+  isRefreshing: false,
+  error: null,
+  notificationPrefs: {
+    enabled: true,
+    androidArticles: true,
+    iosArticles: true,
+    reactNativeArticles: true,
+    flutterArticles: false,
+  },
+  isInitialized: false,
+
+  initialize: async () => {
+    try {
+      set({ isLoading: true });
+
+      // Load cached data
+      const [cachedArticles, favoriteIds, deletedIds, notificationPrefs] =
+        await Promise.all([
+          storage.getArticles(),
+          storage.getFavorites(),
+          storage.getDeleted(),
+          storage.getNotificationPreferences(),
+        ]);
+
+      set({
+        articles: cachedArticles,
+        favoriteIds,
+        deletedIds,
+        notificationPrefs,
+        isInitialized: true,
+      });
+
+      // Fetch fresh articles in background
+      get().loadArticles();
+    } catch (error) {
+      console.error('Error initializing store:', error);
+      set({ error: 'Failed to initialize app', isLoading: false, isInitialized: true });
+    }
+  },
+
+  loadArticles: async () => {
+    try {
+      set({ isLoading: true, error: null });
+
+      const articles = await fetchArticles('mobile');
+      const deletedIds = get().deletedIds;
+
+      // Filter out deleted articles
+      const filteredArticles = articles.filter(
+        (article) => !deletedIds.includes(article.objectID)
+      );
+
+      // Sort by date (newest first)
+      const sortedArticles = filteredArticles.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      set({ articles: sortedArticles, isLoading: false });
+      await storage.saveArticles(sortedArticles);
+
+      // Save last article ID for notification checking
+      if (sortedArticles.length > 0) {
+        await storage.saveLastArticleId(sortedArticles[0].objectID);
+      }
+    } catch (error) {
+      console.error('Error loading articles:', error);
+      set({ error: 'Failed to load articles. Showing cached data.', isLoading: false });
+    }
+  },
+
+  refreshArticles: async () => {
+    try {
+      set({ isRefreshing: true, error: null });
+
+      const articles = await fetchArticles('mobile');
+      const deletedIds = get().deletedIds;
+
+      // Filter out deleted articles
+      const filteredArticles = articles.filter(
+        (article) => !deletedIds.includes(article.objectID)
+      );
+
+      // Sort by date (newest first)
+      const sortedArticles = filteredArticles.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      set({ articles: sortedArticles, isRefreshing: false });
+      await storage.saveArticles(sortedArticles);
+    } catch (error) {
+      console.error('Error refreshing articles:', error);
+      set({ error: 'Failed to refresh articles', isRefreshing: false });
+    }
+  },
+
+  toggleFavorite: async (articleId: string) => {
+    const { favoriteIds } = get();
+    let newFavorites: string[];
+
+    if (favoriteIds.includes(articleId)) {
+      newFavorites = favoriteIds.filter((id) => id !== articleId);
+    } else {
+      newFavorites = [...favoriteIds, articleId];
+    }
+
+    set({ favoriteIds: newFavorites });
+    await storage.saveFavorites(newFavorites);
+  },
+
+  deleteArticle: async (articleId: string) => {
+    const { articles, deletedIds, favoriteIds } = get();
+
+    // Find the article to be deleted
+    const articleToDelete = articles.find((a) => a.objectID === articleId);
+    
+    // Remove from articles list
+    const newArticles = articles.filter((article) => article.objectID !== articleId);
+    
+    // Add to deleted IDs
+    const newDeletedIds = [...deletedIds, articleId];
+    
+    // Remove from favorites if it was favorited
+    const newFavorites = favoriteIds.filter((id) => id !== articleId);
+
+    set({
+      articles: newArticles,
+      deletedIds: newDeletedIds,
+      favoriteIds: newFavorites,
+    });
+
+    // Store the deleted article data for the deleted view
+    const existingDeletedArticles = await storage.getArticles();
+    const allArticlesIncludingDeleted = articleToDelete 
+      ? [...existingDeletedArticles.filter(a => a.objectID !== articleId), articleToDelete]
+      : existingDeletedArticles;
+
+    await Promise.all([
+      storage.saveArticles(allArticlesIncludingDeleted),
+      storage.saveDeleted(newDeletedIds),
+      storage.saveFavorites(newFavorites),
+    ]);
+  },
+
+  restoreArticle: async (articleId: string) => {
+    const { deletedIds, articles } = get();
+    
+    const newDeletedIds = deletedIds.filter((id) => id !== articleId);
+    
+    // Get the restored article from storage
+    const allStoredArticles = await storage.getArticles();
+    const restoredArticle = allStoredArticles.find((a) => a.objectID === articleId);
+    
+    let newArticles = articles;
+    if (restoredArticle && !articles.find((a) => a.objectID === articleId)) {
+      newArticles = [...articles, restoredArticle].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    }
+
+    set({ deletedIds: newDeletedIds, articles: newArticles });
+    await storage.saveDeleted(newDeletedIds);
+    await storage.saveArticles(newArticles);
+  },
+
+  permanentlyDeleteArticle: async (articleId: string) => {
+    const { deletedIds } = get();
+    const newDeletedIds = deletedIds.filter((id) => id !== articleId);
+    
+    // Note: We keep the ID out of deletedIds, meaning it could reappear
+    // If you want to permanently hide, you'd need a separate "permanentlyDeleted" list
+    
+    set({ deletedIds: newDeletedIds });
+    await storage.saveDeleted(newDeletedIds);
+  },
+
+  setNotificationPrefs: async (prefs: Partial<NotificationPreferences>) => {
+    const { notificationPrefs } = get();
+    const newPrefs = { ...notificationPrefs, ...prefs };
+    set({ notificationPrefs: newPrefs });
+    await storage.saveNotificationPreferences(newPrefs);
+  },
+
+  clearError: () => set({ error: null }),
+}));
+
