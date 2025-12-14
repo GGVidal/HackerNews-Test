@@ -2,7 +2,6 @@ import { useArticlesStore } from '../store/useArticlesStore';
 import * as api from '../services/api';
 import * as storage from '../services/storage';
 
-// Mock the services
 jest.mock('../services/api');
 jest.mock('../services/storage');
 
@@ -10,7 +9,6 @@ describe('useArticlesStore', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
-    // Reset the store between tests
     useArticlesStore.setState({
       articles: [],
       favoriteIds: [],
@@ -105,7 +103,8 @@ describe('useArticlesStore', () => {
         deletedIds: [], 
         favoriteIds: ['1'] 
       });
-      (storage.getArticles as jest.Mock).mockResolvedValue(mockArticles);
+      (storage.getDeletedArticles as jest.Mock).mockResolvedValue([]);
+      (storage.saveDeletedArticles as jest.Mock).mockResolvedValue(undefined);
       (storage.saveArticles as jest.Mock).mockResolvedValue(undefined);
       (storage.saveDeleted as jest.Mock).mockResolvedValue(undefined);
       (storage.saveFavorites as jest.Mock).mockResolvedValue(undefined);
@@ -125,7 +124,8 @@ describe('useArticlesStore', () => {
         articles: [mockArticles[1]], 
         deletedIds: ['1'] 
       });
-      (storage.getArticles as jest.Mock).mockResolvedValue(mockArticles);
+      (storage.getDeletedArticles as jest.Mock).mockResolvedValue(mockArticles);
+      (storage.saveDeletedArticles as jest.Mock).mockResolvedValue(undefined);
       (storage.saveDeleted as jest.Mock).mockResolvedValue(undefined);
       (storage.saveArticles as jest.Mock).mockResolvedValue(undefined);
 
@@ -145,7 +145,7 @@ describe('useArticlesStore', () => {
 
       const state = useArticlesStore.getState();
       expect(state.notificationPrefs.androidArticles).toBe(false);
-      expect(state.notificationPrefs.iosArticles).toBe(true); // unchanged
+      expect(state.notificationPrefs.iosArticles).toBe(true);
     });
   });
 
@@ -159,7 +159,6 @@ describe('useArticlesStore', () => {
       await useArticlesStore.getState().loadArticles();
 
       const state = useArticlesStore.getState();
-      // Article '2' should be filtered out because it's in deletedIds
       expect(state.articles.find(a => a.objectID === '2')).toBeUndefined();
       expect(state.articles.find(a => a.objectID === '1')).toBeDefined();
     });

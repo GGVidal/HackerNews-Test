@@ -1,10 +1,6 @@
 import { useArticlesStore } from '../store/useArticlesStore';
 
-// Mock the store
 jest.mock('../store/useArticlesStore');
-
-// Since react-test-renderer with mocked react-native components is complex,
-// we'll test the business logic that components depend on instead
 
 describe('Components - Business Logic', () => {
   describe('ArticleCard logic', () => {

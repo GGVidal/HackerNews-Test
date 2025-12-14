@@ -11,7 +11,6 @@ const STORAGE_KEYS = {
   HAS_REQUESTED_PERMISSION: '@techtest/has_requested_permission',
 };
 
-// Articles
 export const saveArticles = async (articles: Article[]): Promise<void> => {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(articles));
@@ -31,7 +30,6 @@ export const getArticles = async (): Promise<Article[]> => {
   }
 };
 
-// Favorites
 export const saveFavorites = async (favorites: string[]): Promise<void> => {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(favorites));
@@ -51,7 +49,6 @@ export const getFavorites = async (): Promise<string[]> => {
   }
 };
 
-// Deleted articles
 export const saveDeleted = async (deleted: string[]): Promise<void> => {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.DELETED, JSON.stringify(deleted));
@@ -71,7 +68,6 @@ export const getDeleted = async (): Promise<string[]> => {
   }
 };
 
-// Deleted articles data (full article objects for viewing in Deleted tab)
 export const saveDeletedArticles = async (articles: Article[]): Promise<void> => {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.DELETED_ARTICLES, JSON.stringify(articles));
@@ -91,7 +87,6 @@ export const getDeletedArticles = async (): Promise<Article[]> => {
   }
 };
 
-// Notification preferences
 export const saveNotificationPreferences = async (
   prefs: NotificationPreferences
 ): Promise<void> => {
@@ -128,7 +123,6 @@ export const getNotificationPreferences = async (): Promise<NotificationPreferen
   }
 };
 
-// Last article ID for notification checking
 export const saveLastArticleId = async (id: string): Promise<void> => {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.LAST_ARTICLE_ID, id);
@@ -147,7 +141,6 @@ export const getLastArticleId = async (): Promise<string | null> => {
   }
 };
 
-// Permission request tracking
 export const setHasRequestedPermission = async (value: boolean): Promise<void> => {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.HAS_REQUESTED_PERMISSION, JSON.stringify(value));
@@ -167,7 +160,6 @@ export const getHasRequestedPermission = async (): Promise<boolean> => {
   }
 };
 
-// Clear all data
 export const clearAllData = async (): Promise<void> => {
   try {
     await AsyncStorage.multiRemove(Object.values(STORAGE_KEYS));
@@ -176,4 +168,3 @@ export const clearAllData = async (): Promise<void> => {
     throw error;
   }
 };
-

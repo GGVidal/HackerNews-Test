@@ -13,7 +13,6 @@ interface ArticlesState {
   notificationPrefs: NotificationPreferences;
   isInitialized: boolean;
 
-  // Actions
   initialize: () => Promise<void>;
   loadArticles: () => Promise<void>;
   refreshArticles: () => Promise<void>;
@@ -45,7 +44,6 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
     try {
       set({ isLoading: true });
 
-      // Load cached data
       const [cachedArticles, favoriteIds, deletedIds, notificationPrefs] =
         await Promise.all([
           storage.getArticles(),
@@ -54,7 +52,6 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
           storage.getNotificationPreferences(),
         ]);
 
-      // Filter out deleted articles from cached articles for display
       const visibleArticles = cachedArticles.filter(
         (article) => !deletedIds.includes(article.objectID)
       );
@@ -67,7 +64,6 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
         isInitialized: true,
       });
 
-      // Fetch fresh articles in background
       get().loadArticles();
     } catch (error) {
       console.error('Error initializing store:', error);
@@ -82,12 +78,10 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
       const articles = await fetchArticles('mobile');
       const deletedIds = get().deletedIds;
 
-      // Filter out deleted articles
       const filteredArticles = articles.filter(
         (article) => !deletedIds.includes(article.objectID)
       );
 
-      // Sort by date (newest first)
       const sortedArticles = filteredArticles.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -96,7 +90,6 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
       set({ articles: sortedArticles, isLoading: false });
       await storage.saveArticles(sortedArticles);
 
-      // Save last article ID for notification checking
       if (sortedArticles.length > 0) {
         await storage.saveLastArticleId(sortedArticles[0].objectID);
       }
@@ -113,12 +106,10 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
       const articles = await fetchArticles('mobile');
       const deletedIds = get().deletedIds;
 
-      // Filter out deleted articles
       const filteredArticles = articles.filter(
         (article) => !deletedIds.includes(article.objectID)
       );
 
-      // Sort by date (newest first)
       const sortedArticles = filteredArticles.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -149,16 +140,9 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
   deleteArticle: async (articleId: string) => {
     const { articles, deletedIds, favoriteIds } = get();
 
-    // Find the article to be deleted
     const articleToDelete = articles.find((a) => a.objectID === articleId);
-    
-    // Remove from articles list
     const newArticles = articles.filter((article) => article.objectID !== articleId);
-    
-    // Add to deleted IDs
     const newDeletedIds = [...deletedIds, articleId];
-    
-    // Remove from favorites if it was favorited
     const newFavorites = favoriteIds.filter((id) => id !== articleId);
 
     set({
@@ -167,7 +151,6 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
       favoriteIds: newFavorites,
     });
 
-    // Store the deleted article data separately for the deleted view
     if (articleToDelete) {
       const existingDeletedArticles = await storage.getDeletedArticles();
       const newDeletedArticles = [
@@ -188,8 +171,6 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
     const { deletedIds, articles } = get();
     
     const newDeletedIds = deletedIds.filter((id) => id !== articleId);
-    
-    // Get the restored article from deleted articles storage
     const deletedArticles = await storage.getDeletedArticles();
     const restoredArticle = deletedArticles.find((a) => a.objectID === articleId);
     
@@ -200,7 +181,6 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
       );
     }
 
-    // Remove from deleted articles storage
     const newDeletedArticles = deletedArticles.filter((a) => a.objectID !== articleId);
 
     set({ deletedIds: newDeletedIds, articles: newArticles });
@@ -215,9 +195,6 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
     const { deletedIds } = get();
     const newDeletedIds = deletedIds.filter((id) => id !== articleId);
     
-    // Note: We keep the ID out of deletedIds, meaning it could reappear
-    // If you want to permanently hide, you'd need a separate "permanentlyDeleted" list
-    
     set({ deletedIds: newDeletedIds });
     await storage.saveDeleted(newDeletedIds);
   },
@@ -231,4 +208,3 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 }));
-

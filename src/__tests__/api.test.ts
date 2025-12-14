@@ -1,6 +1,5 @@
 import { fetchArticles, fetchArticlesByTopics } from '../services/api';
 
-// Mock fetch globally
 global.fetch = jest.fn();
 
 describe('API Service', () => {
@@ -152,13 +151,11 @@ describe('API Service', () => {
 
       const result = await fetchArticlesByTopics(['android', 'ios']);
 
-      // Should have 3 unique articles
       expect(result).toHaveLength(3);
       
-      // Should be sorted by date (newest first)
-      expect(result[0].objectID).toBe('3'); // Jan 3
-      expect(result[1].objectID).toBe('1'); // Jan 2
-      expect(result[2].objectID).toBe('2'); // Jan 1
+      expect(result[0].objectID).toBe('3');
+      expect(result[1].objectID).toBe('1');
+      expect(result[2].objectID).toBe('2');
     });
   });
 });

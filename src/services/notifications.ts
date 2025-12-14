@@ -1,14 +1,12 @@
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
-import { Platform } from 'react-native';
 import { fetchArticles } from './api';
 import * as storage from './storage';
 import { NotificationPreferences } from '../types';
 
 const BACKGROUND_FETCH_TASK = 'background-fetch-articles';
 
-// Configure notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -19,7 +17,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Request notification permissions
 export const requestNotificationPermissions = async (): Promise<boolean> => {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   
@@ -31,13 +28,11 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
   return status === 'granted';
 };
 
-// Check if permissions are granted
 export const checkNotificationPermissions = async (): Promise<boolean> => {
   const { status } = await Notifications.getPermissionsAsync();
   return status === 'granted';
 };
 
-// Schedule a local notification
 export const sendLocalNotification = async (
   title: string,
   body: string,
@@ -50,11 +45,10 @@ export const sendLocalNotification = async (
       data,
       sound: true,
     },
-    trigger: null, // Immediate notification
+    trigger: null,
   });
 };
 
-// Get notification topics based on preferences
 const getNotificationTopics = (prefs: NotificationPreferences): string[] => {
   const topics: string[] = [];
   if (prefs.androidArticles) topics.push('android');
@@ -64,7 +58,6 @@ const getNotificationTopics = (prefs: NotificationPreferences): string[] => {
   return topics;
 };
 
-// Check for new articles and send notification
 export const checkForNewArticles = async (): Promise<void> => {
   try {
     const [prefs, lastArticleId] = await Promise.all([
@@ -72,7 +65,6 @@ export const checkForNewArticles = async (): Promise<void> => {
       storage.getLastArticleId(),
     ]);
 
-    // Don't check if notifications are disabled
     if (!prefs.enabled) {
       return;
     }
@@ -82,7 +74,6 @@ export const checkForNewArticles = async (): Promise<void> => {
       return;
     }
 
-    // Fetch latest articles
     const articles = await fetchArticles('mobile');
     
     if (articles.length === 0) {
@@ -91,13 +82,10 @@ export const checkForNewArticles = async (): Promise<void> => {
 
     const latestArticle = articles[0];
     
-    // If we have a last article ID and it's different from the latest
     if (lastArticleId && latestArticle.objectID !== lastArticleId) {
-      // Find new articles
       const lastIndex = articles.findIndex((a) => a.objectID === lastArticleId);
       const newArticles = lastIndex === -1 ? articles : articles.slice(0, lastIndex);
       
-      // Filter by user preferences
       const relevantArticles = newArticles.filter((article) => {
         const title = (article.title || article.story_title || '').toLowerCase();
         return topics.some((topic) => title.includes(topic.toLowerCase()));
@@ -124,14 +112,12 @@ export const checkForNewArticles = async (): Promise<void> => {
       }
     }
 
-    // Update last article ID
     await storage.saveLastArticleId(latestArticle.objectID);
   } catch (error) {
     console.error('Error checking for new articles:', error);
   }
 };
 
-// Define the background task
 TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
   try {
     await checkForNewArticles();
@@ -142,7 +128,6 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
   }
 });
 
-// Register background fetch
 export const registerBackgroundFetch = async (): Promise<void> => {
   try {
     const status = await BackgroundFetch.getStatusAsync();
@@ -154,7 +139,7 @@ export const registerBackgroundFetch = async (): Promise<void> => {
     }
 
     await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
-      minimumInterval: 15 * 60, // 15 minutes
+      minimumInterval: 15 * 60,
       stopOnTerminate: false,
       startOnBoot: true,
     });
@@ -165,7 +150,6 @@ export const registerBackgroundFetch = async (): Promise<void> => {
   }
 };
 
-// Unregister background fetch
 export const unregisterBackgroundFetch = async (): Promise<void> => {
   try {
     await BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
@@ -175,17 +159,14 @@ export const unregisterBackgroundFetch = async (): Promise<void> => {
   }
 };
 
-// Handle notification response (when user taps on notification)
 export const addNotificationResponseListener = (
   callback: (response: Notifications.NotificationResponse) => void
 ): Notifications.Subscription => {
   return Notifications.addNotificationResponseReceivedListener(callback);
 };
 
-// Handle notification received while app is in foreground
 export const addNotificationReceivedListener = (
   callback: (notification: Notifications.Notification) => void
 ): Notifications.Subscription => {
   return Notifications.addNotificationReceivedListener(callback);
 };
-

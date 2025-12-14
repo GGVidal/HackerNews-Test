@@ -16,7 +16,6 @@ import {
 } from '../services/storage';
 import { Article, NotificationPreferences } from '../types';
 
-// Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: jest.fn(),
   getItem: jest.fn(),
@@ -231,6 +230,7 @@ describe('Storage Service', () => {
         '@techtest/articles',
         '@techtest/favorites',
         '@techtest/deleted',
+        '@techtest/deleted_articles',
         '@techtest/notification_prefs',
         '@techtest/last_article_id',
         '@techtest/has_requested_permission',

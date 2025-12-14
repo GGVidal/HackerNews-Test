@@ -1,7 +1,5 @@
-// Define globals before anything else
 global.__DEV__ = true;
 
-// Mock react-native before it's used anywhere
 jest.mock('react-native', () => ({
   Platform: {
     OS: 'ios',
@@ -60,7 +58,6 @@ jest.mock('react-native', () => ({
   RefreshControl: 'RefreshControl',
 }));
 
-// Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: jest.fn(() => Promise.resolve()),
   getItem: jest.fn(() => Promise.resolve(null)),
@@ -70,7 +67,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   getAllKeys: jest.fn(() => Promise.resolve([])),
 }));
 
-// Mock expo-notifications
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
   getPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
@@ -80,12 +76,10 @@ jest.mock('expo-notifications', () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
 }));
 
-// Mock expo-task-manager
 jest.mock('expo-task-manager', () => ({
   defineTask: jest.fn(),
 }));
 
-// Mock expo-background-fetch
 jest.mock('expo-background-fetch', () => ({
   getStatusAsync: jest.fn(() => Promise.resolve(3)),
   registerTaskAsync: jest.fn(() => Promise.resolve()),
@@ -102,12 +96,10 @@ jest.mock('expo-background-fetch', () => ({
   },
 }));
 
-// Mock react-native-webview
 jest.mock('react-native-webview', () => ({
   WebView: 'WebView',
 }));
 
-// Mock react-native-gesture-handler
 jest.mock('react-native-gesture-handler', () => {
   return {
     GestureHandlerRootView: ({ children }) => children,
@@ -118,7 +110,6 @@ jest.mock('react-native-gesture-handler', () => {
   };
 });
 
-// Mock @react-navigation/native
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     navigate: jest.fn(),
@@ -131,12 +122,10 @@ jest.mock('@react-navigation/native', () => ({
   NavigationContainer: ({ children }) => children,
 }));
 
-// Mock expo-status-bar
 jest.mock('expo-status-bar', () => ({
   StatusBar: 'StatusBar',
 }));
 
-// Mock @testing-library/react-native to avoid RN import issues
 jest.mock('@testing-library/react-native', () => {
   const React = require('react');
   const TestRenderer = require('react-test-renderer');
@@ -162,10 +151,8 @@ jest.mock('@testing-library/react-native', () => {
         try {
           traverse(instance);
         } catch (e) {
-          // Ignore traversal errors
         }
         if (nodes.length === 0) {
-          // Return a mock element that has truthiness for simple assertions
           return { text };
         }
         return nodes[0];
@@ -213,7 +200,6 @@ jest.mock('@testing-library/react-native', () => {
   };
 });
 
-// Silence specific warnings and expected test errors
 const originalConsoleError = console.error;
 console.error = (...args) => {
   if (

@@ -14,7 +14,6 @@ export default function DeletedScreen() {
   useEffect(() => {
     const loadDeletedArticles = async () => {
       const articles = await storage.getDeletedArticles();
-      // Filter to only show articles that are still in deletedIds
       const validDeleted = articles.filter((article) =>
         deletedIds.includes(article.objectID)
       );
