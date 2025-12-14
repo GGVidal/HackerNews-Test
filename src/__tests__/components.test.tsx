@@ -1,7 +1,3 @@
-import { useArticlesStore } from '../store/useArticlesStore';
-
-jest.mock('../store/useArticlesStore');
-
 describe('Components - Business Logic', () => {
   describe('ArticleCard logic', () => {
     const mockArticle = {
@@ -137,28 +133,29 @@ describe('Components - Business Logic', () => {
     });
   });
 
-  describe('Store mock behavior', () => {
-    it('should mock toggleFavorite correctly', () => {
-      const toggleFavoriteMock = jest.fn();
-      (useArticlesStore as unknown as jest.Mock).mockReturnValue({
-        favoriteIds: [],
-        toggleFavorite: toggleFavoriteMock,
-      });
-
-      const store = useArticlesStore();
-      store.toggleFavorite('1');
+  describe('Favorites logic', () => {
+    it('should toggle favorite correctly - add', () => {
+      const favoriteIds: string[] = [];
+      const articleId = '1';
       
-      expect(toggleFavoriteMock).toHaveBeenCalledWith('1');
+      const isFavorite = favoriteIds.includes(articleId);
+      const newFavorites = isFavorite
+        ? favoriteIds.filter((id) => id !== articleId)
+        : [...favoriteIds, articleId];
+      
+      expect(newFavorites).toEqual(['1']);
     });
 
-    it('should return favoriteIds from store', () => {
-      (useArticlesStore as unknown as jest.Mock).mockReturnValue({
-        favoriteIds: ['1', '2', '3'],
-        toggleFavorite: jest.fn(),
-      });
-
-      const store = useArticlesStore();
-      expect(store.favoriteIds).toEqual(['1', '2', '3']);
+    it('should toggle favorite correctly - remove', () => {
+      const favoriteIds = ['1', '2', '3'];
+      const articleId = '2';
+      
+      const isFavorite = favoriteIds.includes(articleId);
+      const newFavorites = isFavorite
+        ? favoriteIds.filter((id) => id !== articleId)
+        : [...favoriteIds, articleId];
+      
+      expect(newFavorites).toEqual(['1', '3']);
     });
   });
 });

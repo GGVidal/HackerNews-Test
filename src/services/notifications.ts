@@ -48,12 +48,17 @@ const getNotificationTopics = (prefs: NotificationPreferences): string[] => {
   const topics: string[] = [];
   if (prefs.androidArticles) topics.push('android');
   if (prefs.iosArticles) topics.push('ios');
-  if (prefs.reactNativeArticles) topics.push('react native');
+  if (prefs.reactNativeArticles) topics.push('react native', 'react-native', 'reactnative');
   if (prefs.flutterArticles) topics.push('flutter');
   return topics;
 };
 
-export const checkForNewArticles = async (): Promise<void> => {
+const articleMatchesTopics = (article: { title?: string | null; story_title?: string | null }, topics: string[]): boolean => {
+  const title = (article.title || article.story_title || '').toLowerCase();
+  return topics.some((topic) => title.includes(topic.toLowerCase()));
+};
+
+export const checkForNewArticles = async (): Promise<{ found: boolean; count: number }> => {
   try {
     const [prefs, lastArticleId] = await Promise.all([
       storage.getNotificationPreferences(),
@@ -61,30 +66,32 @@ export const checkForNewArticles = async (): Promise<void> => {
     ]);
 
     if (!prefs.enabled) {
-      return;
+      return { found: false, count: 0 };
     }
 
     const topics = getNotificationTopics(prefs);
     if (topics.length === 0) {
-      return;
+      return { found: false, count: 0 };
     }
 
     const articles = await fetchArticles('mobile');
     
     if (articles.length === 0) {
-      return;
+      return { found: false, count: 0 };
     }
 
     const latestArticle = articles[0];
     
-    if (lastArticleId && latestArticle.objectID !== lastArticleId) {
+    if (!lastArticleId) {
+      await storage.saveLastArticleId(latestArticle.objectID);
+      return { found: false, count: 0 };
+    }
+    
+    if (latestArticle.objectID !== lastArticleId) {
       const lastIndex = articles.findIndex((a) => a.objectID === lastArticleId);
       const newArticles = lastIndex === -1 ? articles : articles.slice(0, lastIndex);
       
-      const relevantArticles = newArticles.filter((article) => {
-        const title = (article.title || article.story_title || '').toLowerCase();
-        return topics.some((topic) => title.includes(topic.toLowerCase()));
-      });
+      const relevantArticles = newArticles.filter((article) => articleMatchesTopics(article, topics));
 
       if (relevantArticles.length > 0) {
         const firstArticle = relevantArticles[0];
@@ -104,19 +111,74 @@ export const checkForNewArticles = async (): Promise<void> => {
           url: articleUrl,
           title: articleTitle,
         });
+        
+        await storage.saveLastArticleId(latestArticle.objectID);
+        return { found: true, count: relevantArticles.length };
       }
     }
 
     await storage.saveLastArticleId(latestArticle.objectID);
+    return { found: false, count: 0 };
   } catch (error) {
     console.error('Error checking for new articles:', error);
+    return { found: false, count: 0 };
+  }
+};
+
+export const forceCheckNewArticles = async (): Promise<{ found: boolean; count: number; message: string }> => {
+  try {
+    const prefs = await storage.getNotificationPreferences();
+    
+    if (!prefs.enabled) {
+      return { found: false, count: 0, message: 'Notifications are disabled' };
+    }
+
+    const topics = getNotificationTopics(prefs);
+    if (topics.length === 0) {
+      return { found: false, count: 0, message: 'No topics selected' };
+    }
+
+    const articles = await fetchArticles('mobile');
+    
+    if (articles.length === 0) {
+      return { found: false, count: 0, message: 'No articles found' };
+    }
+
+    const relevantArticles = articles.filter((article) => articleMatchesTopics(article, topics));
+    
+    if (relevantArticles.length > 0) {
+      const firstArticle = relevantArticles[0];
+      const articleTitle = firstArticle.title || firstArticle.story_title || 'New article';
+      const articleUrl = firstArticle.url || firstArticle.story_url;
+
+      await sendLocalNotification(
+        'New Mobile Article Found',
+        articleTitle,
+        {
+          articleId: firstArticle.objectID,
+          url: articleUrl,
+          title: articleTitle,
+        }
+      );
+      
+      await storage.saveLastArticleId(articles[0].objectID);
+      return { found: true, count: relevantArticles.length, message: `Found ${relevantArticles.length} matching articles` };
+    }
+
+    await storage.saveLastArticleId(articles[0].objectID);
+    return { found: false, count: 0, message: `No articles matching your topics (${topics.join(', ')})` };
+  } catch (error) {
+    console.error('Error in force check:', error);
+    return { found: false, count: 0, message: 'Error checking for articles' };
   }
 };
 
 TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
   try {
-    await checkForNewArticles();
-    return BackgroundFetch.BackgroundFetchResult.NewData;
+    const result = await checkForNewArticles();
+    return result.found 
+      ? BackgroundFetch.BackgroundFetchResult.NewData 
+      : BackgroundFetch.BackgroundFetchResult.NoData;
   } catch (error) {
     console.error('Background fetch failed:', error);
     return BackgroundFetch.BackgroundFetchResult.Failed;

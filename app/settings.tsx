@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Switch, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, Text, Switch, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useArticlesStore } from '../src/store/useArticlesStore';
-import { sendLocalNotification } from '../src/services/notifications';
+import { sendLocalNotification, forceCheckNewArticles } from '../src/services/notifications';
 
 export default function SettingsScreen() {
   const { notificationPrefs, setNotificationPrefs } = useArticlesStore();
   const [permissionStatus, setPermissionStatus] = useState<string>('unknown');
+  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
     checkPermissionStatus();
@@ -55,6 +56,33 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleCheckNewArticles = async () => {
+    if (permissionStatus !== 'granted') {
+      Alert.alert('Permission Required', 'Please enable notifications first.');
+      return;
+    }
+
+    if (!notificationPrefs.enabled) {
+      Alert.alert('Notifications Disabled', 'Please enable notifications in the settings above.');
+      return;
+    }
+    
+    setIsChecking(true);
+    try {
+      const result = await forceCheckNewArticles();
+      
+      if (result.found) {
+        Alert.alert('New Articles Found! 🎉', result.message);
+      } else {
+        Alert.alert('No New Articles', result.message);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to check for new articles.');
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   const renderSwitch = (title: string, value: boolean, onValueChange: (v: boolean) => void, disabled = false) => (
     <View style={[styles.settingItem, disabled && styles.settingItemDisabled]}>
       <Text style={[styles.settingTitle, disabled && styles.textDisabled]}>{title}</Text>
@@ -83,12 +111,28 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>TESTING</Text>
         <TouchableOpacity 
-          style={[styles.testButton, permissionStatus !== 'granted' && styles.testButtonDisabled]} 
+          style={[styles.checkButton, (permissionStatus !== 'granted' || !notificationPrefs.enabled) && styles.buttonDisabled]} 
+          onPress={handleCheckNewArticles}
+          disabled={permissionStatus !== 'granted' || !notificationPrefs.enabled || isChecking}
+        >
+          {isChecking ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text style={styles.buttonText}>Check for New Articles</Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.testButton, permissionStatus !== 'granted' && styles.buttonDisabled]} 
           onPress={handleTestNotification}
           disabled={permissionStatus !== 'granted'}
         >
-          <Text style={styles.testButtonText}>Send Test Notification</Text>
+          <Text style={styles.buttonText}>Send Test Notification</Text>
         </TouchableOpacity>
+      </View>
+      <View style={styles.infoSection}>
+        <Text style={styles.infoText}>
+          Note: Background notifications require a development build. Use "Check for New Articles" to manually test the notification feature.
+        </Text>
       </View>
     </ScrollView>
   );
@@ -104,7 +148,10 @@ const styles = StyleSheet.create({
   textDisabled: { color: '#888888' },
   permissionButton: { backgroundColor: '#007AFF', marginHorizontal: 16, marginVertical: 12, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   permissionButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
-  testButton: { backgroundColor: '#34C759', marginHorizontal: 16, marginVertical: 12, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  testButtonDisabled: { backgroundColor: '#a0a0a0' },
-  testButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
+  checkButton: { backgroundColor: '#007AFF', marginHorizontal: 16, marginTop: 12, marginBottom: 8, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  testButton: { backgroundColor: '#34C759', marginHorizontal: 16, marginBottom: 12, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  buttonDisabled: { backgroundColor: '#a0a0a0' },
+  buttonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
+  infoSection: { padding: 16 },
+  infoText: { fontSize: 13, color: '#888888', textAlign: 'center', lineHeight: 18 },
 });
