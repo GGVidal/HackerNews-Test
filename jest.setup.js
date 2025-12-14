@@ -122,6 +122,25 @@ jest.mock('@react-navigation/native', () => ({
   NavigationContainer: ({ children }) => children,
 }));
 
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    back: jest.fn(),
+    replace: jest.fn(),
+  }),
+  useLocalSearchParams: () => ({}),
+  Stack: {
+    Screen: 'Stack.Screen',
+  },
+  Tabs: {
+    Screen: 'Tabs.Screen',
+  },
+  router: {
+    push: jest.fn(),
+    back: jest.fn(),
+  },
+}));
+
 jest.mock('expo-status-bar', () => ({
   StatusBar: 'StatusBar',
 }));
