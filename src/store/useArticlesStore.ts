@@ -54,8 +54,13 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
           storage.getNotificationPreferences(),
         ]);
 
+      // Filter out deleted articles from cached articles for display
+      const visibleArticles = cachedArticles.filter(
+        (article) => !deletedIds.includes(article.objectID)
+      );
+
       set({
-        articles: cachedArticles,
+        articles: visibleArticles,
         favoriteIds,
         deletedIds,
         notificationPrefs,
@@ -162,14 +167,18 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
       favoriteIds: newFavorites,
     });
 
-    // Store the deleted article data for the deleted view
-    const existingDeletedArticles = await storage.getArticles();
-    const allArticlesIncludingDeleted = articleToDelete 
-      ? [...existingDeletedArticles.filter(a => a.objectID !== articleId), articleToDelete]
-      : existingDeletedArticles;
+    // Store the deleted article data separately for the deleted view
+    if (articleToDelete) {
+      const existingDeletedArticles = await storage.getDeletedArticles();
+      const newDeletedArticles = [
+        ...existingDeletedArticles.filter(a => a.objectID !== articleId),
+        articleToDelete,
+      ];
+      await storage.saveDeletedArticles(newDeletedArticles);
+    }
 
     await Promise.all([
-      storage.saveArticles(allArticlesIncludingDeleted),
+      storage.saveArticles(newArticles),
       storage.saveDeleted(newDeletedIds),
       storage.saveFavorites(newFavorites),
     ]);
@@ -180,9 +189,9 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
     
     const newDeletedIds = deletedIds.filter((id) => id !== articleId);
     
-    // Get the restored article from storage
-    const allStoredArticles = await storage.getArticles();
-    const restoredArticle = allStoredArticles.find((a) => a.objectID === articleId);
+    // Get the restored article from deleted articles storage
+    const deletedArticles = await storage.getDeletedArticles();
+    const restoredArticle = deletedArticles.find((a) => a.objectID === articleId);
     
     let newArticles = articles;
     if (restoredArticle && !articles.find((a) => a.objectID === articleId)) {
@@ -191,9 +200,15 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
       );
     }
 
+    // Remove from deleted articles storage
+    const newDeletedArticles = deletedArticles.filter((a) => a.objectID !== articleId);
+
     set({ deletedIds: newDeletedIds, articles: newArticles });
-    await storage.saveDeleted(newDeletedIds);
-    await storage.saveArticles(newArticles);
+    await Promise.all([
+      storage.saveDeleted(newDeletedIds),
+      storage.saveArticles(newArticles),
+      storage.saveDeletedArticles(newDeletedArticles),
+    ]);
   },
 
   permanentlyDeleteArticle: async (articleId: string) => {

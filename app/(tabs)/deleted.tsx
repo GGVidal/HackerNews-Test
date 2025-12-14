@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, FlatList, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArticleCard, EmptyState } from '../../src/components';
@@ -9,21 +9,19 @@ import * as storage from '../../src/services/storage';
 export default function DeletedScreen() {
   const router = useRouter();
   const { deletedIds, restoreArticle } = useArticlesStore();
-  const [allStoredArticles, setAllStoredArticles] = useState<Article[]>([]);
+  const [deletedArticles, setDeletedArticles] = useState<Article[]>([]);
 
   useEffect(() => {
-    const loadStoredArticles = async () => {
-      const articles = await storage.getArticles();
-      setAllStoredArticles(articles);
+    const loadDeletedArticles = async () => {
+      const articles = await storage.getDeletedArticles();
+      // Filter to only show articles that are still in deletedIds
+      const validDeleted = articles.filter((article) =>
+        deletedIds.includes(article.objectID)
+      );
+      setDeletedArticles(validDeleted);
     };
-    loadStoredArticles();
+    loadDeletedArticles();
   }, [deletedIds]);
-
-  const deletedArticles = useMemo(() => {
-    return allStoredArticles.filter((article) =>
-      deletedIds.includes(article.objectID)
-    );
-  }, [allStoredArticles, deletedIds]);
 
   const handleArticlePress = useCallback(
     (article: Article) => {

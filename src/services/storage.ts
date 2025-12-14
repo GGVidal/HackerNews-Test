@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   ARTICLES: '@techtest/articles',
   FAVORITES: '@techtest/favorites',
   DELETED: '@techtest/deleted',
+  DELETED_ARTICLES: '@techtest/deleted_articles',
   NOTIFICATION_PREFS: '@techtest/notification_prefs',
   LAST_ARTICLE_ID: '@techtest/last_article_id',
   HAS_REQUESTED_PERMISSION: '@techtest/has_requested_permission',
@@ -66,6 +67,26 @@ export const getDeleted = async (): Promise<string[]> => {
     return data ? JSON.parse(data) : [];
   } catch (error) {
     console.error('Error getting deleted:', error);
+    return [];
+  }
+};
+
+// Deleted articles data (full article objects for viewing in Deleted tab)
+export const saveDeletedArticles = async (articles: Article[]): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.DELETED_ARTICLES, JSON.stringify(articles));
+  } catch (error) {
+    console.error('Error saving deleted articles:', error);
+    throw error;
+  }
+};
+
+export const getDeletedArticles = async (): Promise<Article[]> => {
+  try {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.DELETED_ARTICLES);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error getting deleted articles:', error);
     return [];
   }
 };

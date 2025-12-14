@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Switch, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useArticlesStore } from '../src/store/useArticlesStore';
+import { sendLocalNotification } from '../src/services/notifications';
 
 export default function SettingsScreen() {
   const { notificationPrefs, setNotificationPrefs } = useArticlesStore();
@@ -33,6 +34,27 @@ export default function SettingsScreen() {
     setNotificationPrefs({ enabled: value });
   };
 
+  const handleTestNotification = async () => {
+    if (permissionStatus !== 'granted') {
+      Alert.alert('Permission Required', 'Please enable notifications first.');
+      return;
+    }
+    
+    try {
+      await sendLocalNotification(
+        'Test Notification 🚀',
+        'This is a test notification from HN Mobile Reader!',
+        {
+          url: 'https://news.ycombinator.com',
+          title: 'Hacker News',
+        }
+      );
+      Alert.alert('Success', 'Test notification sent! Check your notification center.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send test notification.');
+    }
+  };
+
   const renderSwitch = (title: string, value: boolean, onValueChange: (v: boolean) => void, disabled = false) => (
     <View style={[styles.settingItem, disabled && styles.settingItemDisabled]}>
       <Text style={[styles.settingTitle, disabled && styles.textDisabled]}>{title}</Text>
@@ -58,6 +80,16 @@ export default function SettingsScreen() {
         {renderSwitch('React Native Articles', notificationPrefs.reactNativeArticles, (v) => setNotificationPrefs({ reactNativeArticles: v }), !notificationPrefs.enabled)}
         {renderSwitch('Flutter Articles', notificationPrefs.flutterArticles, (v) => setNotificationPrefs({ flutterArticles: v }), !notificationPrefs.enabled)}
       </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>TESTING</Text>
+        <TouchableOpacity 
+          style={[styles.testButton, permissionStatus !== 'granted' && styles.testButtonDisabled]} 
+          onPress={handleTestNotification}
+          disabled={permissionStatus !== 'granted'}
+        >
+          <Text style={styles.testButtonText}>Send Test Notification</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -72,4 +104,7 @@ const styles = StyleSheet.create({
   textDisabled: { color: '#888888' },
   permissionButton: { backgroundColor: '#007AFF', marginHorizontal: 16, marginVertical: 12, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   permissionButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
+  testButton: { backgroundColor: '#34C759', marginHorizontal: 16, marginVertical: 12, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  testButtonDisabled: { backgroundColor: '#a0a0a0' },
+  testButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
 });
