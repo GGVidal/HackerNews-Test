@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { View, Alert, ActivityIndicator, Text } from 'react-native';
+import { QueryProvider } from '../src/providers/QueryProvider';
 import { useArticlesStore } from '../src/store/useArticlesStore';
 import {
   requestNotificationPermissions,
@@ -13,7 +14,7 @@ import {
 import * as storage from '../src/services/storage';
 import { router } from 'expo-router';
 
-export default function RootLayout() {
+function AppContent() {
   const { initialize, isInitialized } = useArticlesStore();
   const [isReady, setIsReady] = useState(false);
 
@@ -88,24 +89,29 @@ export default function RootLayout() {
 
   if (!isReady || !isInitialized) {
     return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <StatusBar style="dark" />
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={{ marginTop: 16, color: '#888' }}>Loading...</Text>
-        </View>
-      </GestureHandlerRootView>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={{ marginTop: 16, color: '#888' }}>Loading...</Text>
+      </View>
     );
   }
 
   return (
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="webview" options={{ title: 'Article' }} />
+      <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="dark" />
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="webview" options={{ title: 'Article' }} />
-        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-      </Stack>
+      <QueryProvider>
+        <AppContent />
+      </QueryProvider>
     </GestureHandlerRootView>
   );
 }

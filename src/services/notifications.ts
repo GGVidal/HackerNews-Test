@@ -28,11 +28,6 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
   return status === 'granted';
 };
 
-export const checkNotificationPermissions = async (): Promise<boolean> => {
-  const { status } = await Notifications.getPermissionsAsync();
-  return status === 'granted';
-};
-
 export const sendLocalNotification = async (
   title: string,
   body: string,
@@ -147,15 +142,6 @@ export const registerBackgroundFetch = async (): Promise<void> => {
     console.log('Background fetch registered successfully');
   } catch (error) {
     console.error('Failed to register background fetch:', error);
-  }
-};
-
-export const unregisterBackgroundFetch = async (): Promise<void> => {
-  try {
-    await BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
-    console.log('Background fetch unregistered');
-  } catch (error) {
-    console.error('Failed to unregister background fetch:', error);
   }
 };
 

@@ -3,20 +3,21 @@ import { StyleSheet, View, FlatList, RefreshControl, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ArticleCard, SwipeableRow, EmptyState, LoadingSpinner } from '../../src/components';
-import { useArticlesStore } from '../../src/store/useArticlesStore';
+import { 
+  useArticlesQuery, 
+  useDeletedIdsQuery, 
+  useFavoritesQuery,
+  useDeleteArticle 
+} from '../../src/hooks/useArticles';
 import { Article } from '../../src/types';
 
 export default function ArticlesScreen() {
   const router = useRouter();
-  const {
-    articles,
-    isLoading,
-    isRefreshing,
-    error,
-    deletedIds,
-    refreshArticles,
-    deleteArticle,
-  } = useArticlesStore();
+  
+  const { data: articles = [], isLoading, isRefetching, refetch, error } = useArticlesQuery();
+  const { data: deletedIds = [] } = useDeletedIdsQuery();
+  const { data: favorites = [] } = useFavoritesQuery();
+  const deleteArticleMutation = useDeleteArticle();
 
   const visibleArticles = articles.filter(
     (article) => !deletedIds.includes(article.objectID)
@@ -34,15 +35,19 @@ export default function ArticlesScreen() {
   );
 
   const handleDelete = useCallback(
-    (articleId: string) => {
-      deleteArticle(articleId);
+    (article: Article) => {
+      deleteArticleMutation.mutate({
+        article,
+        currentDeletedIds: deletedIds,
+        currentFavorites: favorites,
+      });
     },
-    [deleteArticle]
+    [deleteArticleMutation, deletedIds, favorites]
   );
 
   const renderItem = useCallback(
     ({ item }: { item: Article }) => (
-      <SwipeableRow onDelete={() => handleDelete(item.objectID)}>
+      <SwipeableRow onDelete={() => handleDelete(item)}>
         <ArticleCard article={item} onPress={() => handleArticlePress(item)} />
       </SwipeableRow>
     ),
@@ -63,7 +68,7 @@ export default function ArticlesScreen() {
     <GestureHandlerRootView style={styles.container}>
       {error && (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>Failed to load articles</Text>
         </View>
       )}
       <FlatList
@@ -73,8 +78,8 @@ export default function ArticlesScreen() {
         contentContainerStyle={visibleArticles.length === 0 ? styles.emptyContainer : undefined}
         refreshControl={
           <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={refreshArticles}
+            refreshing={isRefetching}
+            onRefresh={refetch}
             tintColor="#888888"
           />
         }

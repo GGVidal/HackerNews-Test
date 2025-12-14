@@ -3,12 +3,21 @@ import { StyleSheet, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ArticleCard, SwipeableRow, EmptyState } from '../../src/components';
-import { useArticlesStore } from '../../src/store/useArticlesStore';
+import { 
+  useArticlesQuery, 
+  useDeletedIdsQuery, 
+  useFavoritesQuery,
+  useDeleteArticle 
+} from '../../src/hooks/useArticles';
 import { Article } from '../../src/types';
 
 export default function FavoritesScreen() {
   const router = useRouter();
-  const { articles, favoriteIds, deletedIds, deleteArticle } = useArticlesStore();
+  
+  const { data: articles = [] } = useArticlesQuery();
+  const { data: deletedIds = [] } = useDeletedIdsQuery();
+  const { data: favoriteIds = [] } = useFavoritesQuery();
+  const deleteArticleMutation = useDeleteArticle();
 
   const favoriteArticles = useMemo(() => {
     return articles.filter(
@@ -30,15 +39,19 @@ export default function FavoritesScreen() {
   );
 
   const handleDelete = useCallback(
-    (articleId: string) => {
-      deleteArticle(articleId);
+    (article: Article) => {
+      deleteArticleMutation.mutate({
+        article,
+        currentDeletedIds: deletedIds,
+        currentFavorites: favoriteIds,
+      });
     },
-    [deleteArticle]
+    [deleteArticleMutation, deletedIds, favoriteIds]
   );
 
   const renderItem = useCallback(
     ({ item }: { item: Article }) => (
-      <SwipeableRow onDelete={() => handleDelete(item.objectID)}>
+      <SwipeableRow onDelete={() => handleDelete(item)}>
         <ArticleCard article={item} onPress={() => handleArticlePress(item)} />
       </SwipeableRow>
     ),

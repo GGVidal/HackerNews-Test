@@ -1,26 +1,26 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View, FlatList, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArticleCard, EmptyState } from '../../src/components';
-import { useArticlesStore } from '../../src/store/useArticlesStore';
+import { 
+  useDeletedArticlesQuery, 
+  useDeletedIdsQuery,
+  useRestoreArticle 
+} from '../../src/hooks/useArticles';
 import { Article } from '../../src/types';
-import * as storage from '../../src/services/storage';
 
 export default function DeletedScreen() {
   const router = useRouter();
-  const { deletedIds, restoreArticle } = useArticlesStore();
-  const [deletedArticles, setDeletedArticles] = useState<Article[]>([]);
+  
+  const { data: deletedArticlesData = [] } = useDeletedArticlesQuery();
+  const { data: deletedIds = [] } = useDeletedIdsQuery();
+  const restoreArticleMutation = useRestoreArticle();
 
-  useEffect(() => {
-    const loadDeletedArticles = async () => {
-      const articles = await storage.getDeletedArticles();
-      const validDeleted = articles.filter((article) =>
-        deletedIds.includes(article.objectID)
-      );
-      setDeletedArticles(validDeleted);
-    };
-    loadDeletedArticles();
-  }, [deletedIds]);
+  const deletedArticles = useMemo(() => {
+    return deletedArticlesData.filter((article) =>
+      deletedIds.includes(article.objectID)
+    );
+  }, [deletedArticlesData, deletedIds]);
 
   const handleArticlePress = useCallback(
     (article: Article) => {
@@ -35,9 +35,12 @@ export default function DeletedScreen() {
 
   const handleRestore = useCallback(
     (articleId: string) => {
-      restoreArticle(articleId);
+      restoreArticleMutation.mutate({
+        articleId,
+        currentDeletedIds: deletedIds,
+      });
     },
-    [restoreArticle]
+    [restoreArticleMutation, deletedIds]
   );
 
   const renderItem = useCallback(

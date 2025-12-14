@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Article } from '../types';
-import { useArticlesStore } from '../store/useArticlesStore';
+import { useFavoritesQuery, useToggleFavorite } from '../hooks/useArticles';
 
 interface ArticleCardProps {
   article: Article;
@@ -41,7 +41,8 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   showRestoreButton = false,
   onRestore,
 }) => {
-  const { favoriteIds, toggleFavorite } = useArticlesStore();
+  const { data: favoriteIds = [] } = useFavoritesQuery();
+  const toggleFavoriteMutation = useToggleFavorite();
   const isFavorite = favoriteIds.includes(article.objectID);
   
   const title = article.title || article.story_title || 'Untitled';
@@ -49,7 +50,10 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   const date = formatDate(article.created_at);
 
   const handleLongPress = () => {
-    toggleFavorite(article.objectID);
+    toggleFavoriteMutation.mutate({
+      articleId: article.objectID,
+      currentFavorites: favoriteIds,
+    });
   };
 
   return (

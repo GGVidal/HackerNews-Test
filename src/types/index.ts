@@ -26,15 +26,3 @@ export interface NotificationPreferences {
   flutterArticles: boolean;
 }
 
-export type RootStackParamList = {
-  MainTabs: undefined;
-  WebView: { url: string; title: string };
-  Settings: undefined;
-};
-
-export type TabParamList = {
-  Articles: undefined;
-  Favorites: undefined;
-  Deleted: undefined;
-};
-

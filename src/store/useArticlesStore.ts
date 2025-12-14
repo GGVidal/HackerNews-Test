@@ -19,7 +19,6 @@ interface ArticlesState {
   toggleFavorite: (articleId: string) => Promise<void>;
   deleteArticle: (articleId: string) => Promise<void>;
   restoreArticle: (articleId: string) => Promise<void>;
-  permanentlyDeleteArticle: (articleId: string) => Promise<void>;
   setNotificationPrefs: (prefs: Partial<NotificationPreferences>) => Promise<void>;
   clearError: () => void;
 }
@@ -189,14 +188,6 @@ export const useArticlesStore = create<ArticlesState>((set, get) => ({
       storage.saveArticles(newArticles),
       storage.saveDeletedArticles(newDeletedArticles),
     ]);
-  },
-
-  permanentlyDeleteArticle: async (articleId: string) => {
-    const { deletedIds } = get();
-    const newDeletedIds = deletedIds.filter((id) => id !== articleId);
-    
-    set({ deletedIds: newDeletedIds });
-    await storage.saveDeleted(newDeletedIds);
   },
 
   setNotificationPrefs: async (prefs: Partial<NotificationPreferences>) => {
