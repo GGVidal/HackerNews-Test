@@ -113,7 +113,6 @@ describe('Components - Business Logic', () => {
     it('should format old dates as locale date string', () => {
       const oldDate = new Date('2020-01-01').toISOString();
       const result = formatDate(oldDate);
-      // Just check it's a date string format
       expect(result).toMatch(/\d+\/\d+\/\d+|\d+-\d+-\d+|[A-Z][a-z]+ \d+, \d+/);
     });
   });
